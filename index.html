@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Showcase</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+       
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IPC Programs Showcase</h1>
+            <p>Explore and use inter-process communication examples</p>
+        </header>
+
+        <div id="home-page">
+            <div class="programs-grid">
+                <div class="program-card" onclick="showCode('write-read')">
+                    <h2>write_read.c</h2>
+                    <p>FIFO (Named Pipe) writing program</p>
+                    <button class="btn">View Code</button>
+                </div>
+
+                <div class="program-card" onclick="showCode('read-write')">
+                    <h2>read_write.c</h2>
+                    <p>FIFO (Named Pipe) reading program</p>
+                    <button class="btn">View Code</button>
+                </div>
+
+                <div class="program-card" onclick="showCode('tcp-server')">
+                    <h2>tcp_server.c</h2>
+                    <p>TCP Server implementation</p>
+                    <button class="btn">View Code</button>
+                </div>
+
+                <div class="program-card" onclick="showCode('tcp-client')">
+                    <h2>tcp_client.c</h2>
+                    <p>TCP Client implementation</p>
+                    <button class="btn">View Code</button>
+                </div>
+
+                <div class="program-card" onclick="showCode('udp-server')">
+                    <h2>udp_server.c</h2>
+                    <p>UDP Server implementation</p>
+                    <button class="btn">View Code</button>
+                </div>
+
+                <div class="program-card" onclick="showCode('udp-client')">
+                    <h2>udp_client.c</h2>
+                    <p>UDP Client implementation</p>
+                    <button class="btn">View Code</button>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h2>Instructions to Compile and Run on Ubuntu</h2>
+                <ol>
+                    <li>Open Terminal and create the source files:
+                        <code>nano write-read.c</code>
+                        <p>Paste the first code and save (Ctrl+O, Enter, Ctrl+X).</p>
+                    </li>
+                    <li>Then:
+                        <code>nano read-write.c</code>
+                        <p>Paste the second code and save.</p>
+                    </li>
+                    <li>Compile both programs:
+                        <code>gcc write-read.c -o write-read</code>
+                        <code>gcc read-write.c -o read-write</code>
+                    </li>
+                    <li>Run the programs in two terminals:
+                        <p>Open Terminal 1:</p>
+                        <code>./write-read</code>
+                        <p>Open Terminal 2:</p>
+                        <code>./read-write</code>
+                    </li>
+                    <li>Now communicate between the two programs.</li>
+                    <li>Type a message in one, and you'll see it received in the other.</li>
+                    <li>Type <code>exit</code> in either terminal to terminate both processes.</li>
+                </ol>
+                <p><em>Note: Similar process applies for TCP and UDP programs (compile with gcc and run in separate terminals).</em></p>
+            </div>
+        </div>
+
+        <!-- Code containers (initially hidden) -->
+        <div id="write-read" class="code-container">
+            <div class="code-header">
+                <h2>write_read.c</h2>
+                <div class="code-actions">
+                    <button class="btn" onclick="copyCode('write-read-code')">Copy Code</button>
+                    <button class="btn btn-secondary" onclick="downloadCode('write_read.c', 'write-read-code')">Download</button>
+                    <button class="btn" onclick="goHome()">Back to Home</button>
+                </div>
+            </div>
+            <pre id="write-read-code"><code>// File: write_read.c 
+
+#include &lt;stdio.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/stat.h&gt;  // Added for mkfifo
+#include &lt;unistd.h&gt;
+#include &lt;string.h&gt;
+
+int main() {
+    char *myfifo = "fifo";
+    char message[1024], buffer[1024];
+    int fd;
+
+    // Create FIFO if it doesn't exist
+    mkfifo(myfifo, 0666);
+
+    while (1) {
+        // Write to FIFO
+        fd = open(myfifo, O_WRONLY);
+        memset(message, 0, sizeof(message));
+        printf("Enter data for 2nd program: ");
+        fgets(message, sizeof(message), stdin);
+        message[strcspn(message, "\n")] = '\0';  // remove newline
+
+        write(fd, message, 1024);
+        close(fd);
+
+        if (strcmp(message, "exit") == 0)
+            break;
+
+        // Read from FIFO
+        fd = open(myfifo, O_RDONLY);
+        memset(buffer, 0, sizeof(buffer));
+        read(fd, buffer, 1024);
+        printf("Received data from 2nd program: %s\n", buffer);
+        close(fd);
+
+        if (strcmp(buffer, "exit") == 0)
+            break;
+    }
+
+    return 0;
+}</code></pre>
+        </div>
+
+        <div id="read-write" class="code-container">
+            <div class="code-header">
+                <h2>read_write.c</h2>
+                <div class="code-actions">
+                    <button class="btn" onclick="copyCode('read-write-code')">Copy Code</button>
+                    <button class="btn btn-secondary" onclick="downloadCode('read_write.c', 'read-write-code')">Download</button>
+                    <button class="btn" onclick="goHome()">Back to Home</button>
+                </div>
+            </div>
+            <pre id="read-write-code"><code>// File: read_write.c 
+// Topic: Implementation of two way multiple times communication between two independent processes using a named pipe (FIFO).
+
+#include &lt;stdio.h&gt;
+#include &lt;fcntl.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/stat.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;string.h&gt;
+
+int main() {
+    char *myfifo = "fifo";
+    int fd;
+    char message[1024];
+    char buffer[1024];
+
+    // Create FIFO if it doesn't exist
+    mkfifo(myfifo, 0666);
+
+    while (1) {
+        // Read from FIFO
+        fd = open(myfifo, O_RDONLY);
+        memset(buffer, 0, sizeof(buffer));
+        read(fd, buffer, 1024);
+        printf("Received data from 1st program: %s\n", buffer);
+        close(fd);
+
+        if (strcmp(buffer, "exit") == 0)
+            break;
+
+        // Write to FIFO
+        fd = open(myfifo, O_WRONLY);
+        memset(message, 0, sizeof(message));
+        printf("Enter data for the 1st program: ");
+        fgets(message, sizeof(message), stdin);
+        message[strcspn(message, "\n")] = '\0';  // Remove newline from input
+
+        write(fd, message, 1024);
+        close(fd);
+
+        if (strcmp(message, "exit") == 0)
+            break;
+    }
+
+    return 0;
+}</code></pre>
+        </div>
+
+        <div id="tcp-server" class="code-container">
+            <div class="code-header">
+                <h2>tcp_server.c</h2>
+                <div class="code-actions">
+                    <button class="btn" onclick="copyCode('tcp-server-code')">Copy Code</button>
+                    <button class="btn btn-secondary" onclick="downloadCode('tcp_server.c', 'tcp-server-code')">Download</button>
+                    <button class="btn" onclick="goHome()">Back to Home</button>
+                </div>
+            </div>
+            <pre id="tcp-server-code"><code>// File: tcp_server.c
+
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;string.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+
+#define PORT 8080
+
+int main() {
+    int svrsock_fd, new_conn, opt = 1;
+    char message[1024], buffer[1024];
+    struct sockaddr_in address;
+    socklen_t addrlen = sizeof(struct sockaddr_in);
+
+    // Create socket
+    svrsock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (svrsock_fd &lt; 0) {
+        perror("Socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Reuse address/port
+    setsockopt(svrsock_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+
+    // Define server address
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(PORT);
+
+    // Bind
+    if (bind(svrsock_fd, (struct sockaddr *)&address, addrlen) &lt; 0) {
+        perror("Bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("WAIT FOR CLIENT\n");
+
+    listen(svrsock_fd, 3);
+
+    new_conn = accept(svrsock_fd, (struct sockaddr *)&address, &addrlen);
+    if (new_conn &lt; 0) {
+        perror("Accept failed");
+        exit(EXIT_FAILURE);
+    }
+
+    while (1) {
+        memset(buffer, 0, sizeof(buffer));
+        read(new_conn, buffer, sizeof(buffer));
+        printf("Received data from client: %s\n", buffer);
+
+        if (strcmp(buffer, "exit") == 0)
+            break;
+
+        memset(message, 0, sizeof(message));
+        printf("Enter data for client: ");
+        fgets(message, sizeof(message), stdin);
+        message[strcspn(message, "\n")] = 0; // Remove newline
+
+        send(new_conn, message, sizeof(message), 0);
+
+        if (strcmp(message, "exit") == 0)
+            break;
+    }
+
+    close(new_conn);
+    close(svrsock_fd);
+
+    return 0;
+}</code></pre>
+        </div>
+
+        <div id="tcp-client" class="code-container">
+            <div class="code-header">
+                <h2>tcp_client.c</h2>
+                <div class="code-actions">
+                    <button class="btn" onclick="copyCode('tcp-client-code')">Copy Code</button>
+                    <button class="btn btn-secondary" onclick="downloadCode('tcp_client.c', 'tcp-client-code')">Download</button>
+                    <button class="btn" onclick="goHome()">Back to Home</button>
+                </div>
+            </div>
+            <pre id="tcp-client-code"><code>// File: tcp_client.c
+
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;string.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;arpa/inet.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+
+#define PORT 8080
+
+int main() {
+    int clnsock_fd;
+    char message[1024], buffer[1024];
+    struct sockaddr_in svraddr;
+    socklen_t svraddlen = sizeof(struct sockaddr_in);
+
+    // Create socket
+    clnsock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (clnsock_fd &lt; 0) {
+        perror("Socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Define server address
+    svraddr.sin_family = AF_INET;
+    svraddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    svraddr.sin_port = htons(PORT);
+
+    // Connect to server
+    if (connect(clnsock_fd, (struct sockaddr *)&svraddr, svraddlen) &lt; 0) {
+        perror("Connection failed");
+        exit(EXIT_FAILURE);
+    }
+
+    while (1) {
+        memset(message, 0, sizeof(message));
+        printf("Enter data for server: ");
+        fgets(message, sizeof(message), stdin);
+        message[strcspn(message, "\n")] = 0; // Remove newline
+
+        send(clnsock_fd, message, sizeof(message), 0);
+
+        if (strcmp(message, "exit") == 0)
+            break;
+
+        memset(buffer, 0, sizeof(buffer));
+        read(clnsock_fd, buffer, sizeof(buffer));
+        printf("Received data from server: %s\n", buffer);
+
+        if (strcmp(buffer, "exit") == 0)
+            break;
+    }
+
+    close(clnsock_fd);
+
+    return 0;
+}</code></pre>
+        </div>
+
+        <div id="udp-server" class="code-container">
+            <div class="code-header">
+                <h2>udp_server.c</h2>
+                <div class="code-actions">
+                    <button class="btn" onclick="copyCode('udp-server-code')">Copy Code</button>
+                    <button class="btn btn-secondary" onclick="downloadCode('udp_server.c', 'udp-server-code')">Download</button>
+                    <button class="btn" onclick="goHome()">Back to Home</button>
+                </div>
+            </div>
+            <pre id="udp-server-code"><code>// udp_server.c
+
+#include &lt;stdio.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;string.h&gt;
+
+#define PORT 8090
+
+void main()
+{
+    int svr_sock_fd;
+    char message[1024];
+    char buffer[1024];
+
+    struct sockaddr_in svraddr, chraddr;
+    socklen_t svraddrlen = sizeof(struct sockaddr_in);
+    socklen_t chraddrlen = sizeof(struct sockaddr_in);
+
+    svr_sock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    svraddr.sin_family = AF_INET;
+    svraddr.sin_addr.s_addr = INADDR_ANY;
+    svraddr.sin_port = htons(PORT);
+
+    bind(svr_sock_fd, (struct sockaddr *)&svraddr, svraddrlen);
+
+    while(1)
+    {
+        memset(buffer, 0, sizeof(buffer));
+        recvfrom(svr_sock_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&chraddr, &chraddrlen);
+        
+        printf("Received data from client: %s\n", buffer);
+        if (strcmp(buffer, "exit") == 0) break;
+
+        memset(message, 0, sizeof(message));
+        printf("Enter data for client: ");
+        gets(message);
+
+        sendto(svr_sock_fd, message, sizeof(message), 0, (struct sockaddr *)&chraddr, chraddrlen);
+        if (strcmp(message, "exit") == 0) break;
+    }
+}</code></pre>
+        </div>
+
+        <div id="udp-client" class="code-container">
+            <div class="code-header">
+                <h2>udp_client.c</h2>
+                <div class="code-actions">
+                    <button class="btn" onclick="copyCode('udp-client-code')">Copy Code</button>
+                    <button class="btn btn-secondary" onclick="downloadCode('udp_client.c', 'udp-client-code')">Download</button>
+                    <button class="btn" onclick="goHome()">Back to Home</button>
+                </div>
+            </div>
+            <pre id="udp-client-code"><code>// udp_client.c
+
+#include &lt;stdio.h&gt;
+#include &lt;sys/types.h&gt;
+#include &lt;sys/socket.h&gt;
+#include &lt;netinet/in.h&gt;
+#include &lt;string.h&gt;
+
+#define PORT 8090
+
+void main()
+{
+    int clsock_fd;
+    char message[1024];
+    char buffer[1024];
+
+    struct sockaddr_in svraddr;
+    socklen_t svraddrlen = sizeof(struct sockaddr_in);
+
+    clsock_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    svraddr.sin_family = AF_INET;
+    svraddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    svraddr.sin_port = htons(PORT);
+
+    while (1)
+    {
+        memset(message, 0, sizeof(message));
+        printf("Enter data for server: ");
+        gets(message);
+
+        sendto(clsock_fd, message, sizeof(message), 0,
+               (struct sockaddr *)&svraddr, svraddrlen);
+
+        if (strcmp(message, "exit") == 0) break;
+
+        memset(buffer, 0, sizeof(buffer));
+        recvfrom(clsock_fd, buffer, sizeof(buffer), 0,
+                 (struct sockaddr *)&svraddr, &svraddrlen);
+
+        printf("Received data from server: %s\n", buffer);
+
+        if (strcmp(buffer, "exit") == 0) break;
+    }
+}</code></pre>
+        </div>
+    </div>
+
+    <script>
+        // Show the selected code container and hide home page
+        function showCode(programId) {
+            document.getElementById('home-page').style.display = 'none';
+            document.getElementById(programId).style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        // Return to home page
+        function goHome() {
+            document.getElementById('home-page').style.display = 'block';
+            // Hide all code containers
+            document.querySelectorAll('.code-container').forEach(container => {
+                container.style.display = 'none';
+            });
+            window.scrollTo(0, 0);
+        }
+
+        // Copy code to clipboard
+        function copyCode(elementId) {
+            const codeElement = document.getElementById(elementId);
+            const range = document.createRange();
+            range.selectNode(codeElement);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            
+            // Show feedback
+            const copyBtn = event.target;
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 2000);
+        }
+
+        // Download code as file
+        function downloadCode(filename, elementId) {
+            const codeElement = document.getElementById(elementId);
+            const codeText = codeElement.textContent;
+            
+            const blob = new Blob([codeText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Cleanup
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
